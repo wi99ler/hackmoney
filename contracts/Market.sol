@@ -62,6 +62,7 @@ contract Market {
     }
 
     function changePrice(uint256 itemId, uint256 price) public {
+        require(RegisteredDiaList[itemId].seller == msg.sender, "not owner of this token");
         RegisteredDiaList[itemId].price = price;
     }
 
@@ -71,6 +72,7 @@ contract Market {
 
     function getDiamonds(uint256 first, uint256 end) public view returns
             (uint[] memory, uint[] memory, Status[] memory) {
+        // first, end limit 구현해야됨
 
         uint[] memory ids = new uint[] (end-first);
         uint[] memory price = new uint[](end-first);
@@ -97,7 +99,8 @@ contract Market {
         Item memory dia = RegisteredDiaList[itemId];
         require(msg.sender == dia.buyer, "only buyer can confirm purchase");
         Won won = Won(addrWon);
-        won.transferFrom(msg.sender, address(this), (dia.price * (100 + fee))/100);
+        won.transferFrom(msg.sender, address(this), (dia.price * fee)/100);
+        won.transferFrom(msg.sender, dia.seller, dia.price);
         DiaNFT nft = DiaNFT(addrNFT);
         nft.transferFrom(address(this), msg.sender, dia.tokenId);
     }
