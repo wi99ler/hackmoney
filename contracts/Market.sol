@@ -6,21 +6,23 @@ import "./nft.sol";
 import "./Pool.sol";
 
 contract Market {
-
-    event Register(uint itemId, uint32 price);
-    event Deposit(uint itemId, uint32 price, bool success);
+//    event Register(uint itemId, uint32 price);
+//    event Deposit(uint itemId, uint32 price, bool success);
 
     enum Status {OffSale, OnSale, Rented, Sold}
 
     struct Item {
+        address seller;
         address buyer;
-        uint itemId;
-        uint32 price;
+        uint tokenId;
+        uint256 price;
 
         Status status;
     }
 
-    uint private itemCount;
+    uint fee;
+
+    uint private itemCnt;
     mapping (uint => Item) RegisteredDiaList;
 
     // linking with other contracts
@@ -32,86 +34,78 @@ contract Market {
         addrPool = Pool;
         addrWon = Won;
         addrNFT = NFT;
+        itemCnt = 0;
+        fee = 1;
     }
 
-    function register(uint256 ItemID, uint32 price) public {
-        RegisteredDiaList[itemCount] = Item(ItemID, price, Status.OffSale);
-        itemCount++;
-        emit Register(itemCount-1, price);
+    function register(uint256 tokenId, uint256 price) public {
+        DiaNFT nft = DiaNFT(addrNFT);
+        nft.transferFrom(msg.sender, address(this), tokenId);
+
+        RegisteredDiaList[itemCnt] = Item(msg.sender, address(0x0), tokenId, price, Status.OffSale);
+        itemCnt++;
     }
-/*
-    function getDiamonds () public view returns (Item[] memory) {
-        Item[] memory dias = new Item[](itemCount);
-        for (uint i = 0; i < itemCount; i++) {
-            Item storage dia = RegisteredDiaList[i];
-            dias[i] = dia;
-        }
-        return dias;
+
+    function transitStatus (uint itemId, Status newStatus) public {
+        Item memory item = RegisteredDiaList[itemId];
+        require(item.seller == msg.sender, "not owner of this token");
+        RegisteredDiaList[itemId].status = newStatus;
     }
-*/
-    function getDiamond(uint itemId) public view returns(Item memory) {
-        for(uint i = 0 ; i < itemCount ; i++) {
+
+    function getDiamondByTokenId(uint256 tokenId) public view returns(Item memory) {
+        for(uint i = 0 ; i < itemCnt ; i++) {
             Item storage dia = RegisteredDiaList[i];
-            if (dia.itemId == itemId) {
+            if (dia.tokenId == tokenId) {
                 return dia;
             }
         }
     }
 
-    function getDiamonds () public view returns
+    function changePrice(uint256 itemId, uint256 price) public {
+        RegisteredDiaList[itemId].price = price;
+    }
+
+    function getDiamond(uint256 itemId) public view returns(Item memory) {
+        return RegisteredDiaList[itemId];
+    }
+
+    function getDiamonds(uint256 first, uint256 end) public view returns
             (uint[] memory, uint[] memory, Status[] memory) {
 
-        uint[] memory ids = new uint[] (itemCount);
-        uint[] memory price = new uint[](itemCount);
-        Status[] memory status = new Status[](itemCount);
+        uint[] memory ids = new uint[] (end-first);
+        uint[] memory price = new uint[](end-first);
+        Status[] memory status = new Status[](end-first);
 
-        //Item[] memory dias = new Item[](itemCount);
-        for (uint i = 0; i < itemCount; i++) {
+        //Item[] memory dias = new Item[](itemId);
+        for (uint i = first; i < end ; i++) {
             Item storage dia = RegisteredDiaList[i];
 
-            ids[i] = dia.itemId;
+            ids[i] = dia.tokenId;
             price[i] = dia.price;
             status[i] = dia.status;
         }
         return (ids, price, status);
     }
 
-    function transitStatus (uint itemId, Status newStatus) public {
-        RegisteredDiaList[itemId].status = newStatus;
-    }
-
-    function rentDiamond(uint itemId) public view returns (bool) {
-        require(RegisteredDiaList[itemId].status == Status.OnSale, "The item is not onsale..");
-        return true;
+    function rentDiamond(uint256 itemId) public {
+        require(RegisteredDiaList[itemId].status == Status.OnSale, "The item is not onSale..");
+        RegisteredDiaList[itemId].buyer = msg.sender;
+        RegisteredDiaList[itemId].status = Status.Rented;
     }
 
     function confirmPurchase(uint itemId) public {
-      require()
+        Item memory dia = RegisteredDiaList[itemId];
+        require(msg.sender == dia.buyer, "only buyer can confirm purchase");
+        Won won = Won(addrWon);
+        won.transferFrom(msg.sender, address(this), (dia.price * (100 + fee))/100);
+        DiaNFT nft = DiaNFT(addrNFT);
+        nft.transferFrom(address(this), msg.sender, dia.tokenId);
     }
 
-    function returnDiamond(uint itemId) public view returns (bool) {
-        require(RegisteredDiaList[itemId].status == Status.OnSale, "The item is not onsale..");
-        return true;
+    function returnDiamond(uint itemId) public {
+        require(RegisteredDiaList[itemId].status == Status.Rented, "The item is not Rented..");
+        require(msg.sender == RegisteredDiaList[itemId].buyer, "only buyer can return");
+        RegisteredDiaList[itemId].buyer = address(0x0);
+        RegisteredDiaList[itemId].status = Status.OnSale;
     }
-
-
-
-/*
-    function stateTransition(   bytes32 targetHashedDia, Status toStatus,
-                                bytes32 _anchor, // Merkle Root of NFT Tree..
-                                uint[8] memory points) public returns (bool) {
-        
-    }
-
-    // Temp for compiling the contract.... will be removed when verifier.sol is created by zokrates.
-    function verifyTx (uint[2] memory a, uint[2][2] memory b, uint[2] memory c,
-                        uint[5] memory input) public returns (bool) {
-        return true;
-    }
-
-    function verify (bytes32 targetHash, uint[8] memory points) public {
-        
-    }
-*/
-
 }

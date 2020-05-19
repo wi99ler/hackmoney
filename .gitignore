@@ -120,3 +120,4 @@ dist
 
 bin/
 build/
+node_modules
