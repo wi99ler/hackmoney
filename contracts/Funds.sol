@@ -84,7 +84,7 @@ contract Funds {
     constructor (address Won) public {
         addrWon = Won;
     }
-
+/*
     function Save() public payable {
         Saving[msg.sender] = Saving[msg.sender] + msg.value;
     }
@@ -94,7 +94,7 @@ contract Funds {
         Saving[msg.sender] = Saving[msg.sender] - Amount;
         WON.transfer(msg.sender, Amount);
     }
-
+*/
     // function SplitProfit() payable {
         // msg.value
         //

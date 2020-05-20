@@ -3,7 +3,7 @@ pragma experimental ABIEncoderV2;
 
 import "./StableCoin.sol";
 import "./nft.sol";
-import "./Pool.sol";
+import "./Funds.sol";
 
 contract Market {
 //    event Register(uint itemId, uint32 price);
@@ -26,12 +26,12 @@ contract Market {
     mapping (uint => Item) RegisteredDiaList;
 
     // linking with other contracts
-    address public addrPool;
+    address public addrFunds;
     address public addrWon;
     address public addrNFT;
 
-    constructor (address Pool, address Won, address NFT) public {
-        addrPool = Pool;
+    constructor (address Funds, address Won, address NFT) public {
+        addrFunds = Funds;
         addrWon = Won;
         addrNFT = NFT;
         itemCnt = 0;
@@ -40,6 +40,7 @@ contract Market {
 
     function register(uint256 tokenId, uint256 price) public {
         DiaNFT nft = DiaNFT(addrNFT);
+        nft.approve(address(this), tokenId);
         nft.transferFrom(msg.sender, address(this), tokenId);
 
         RegisteredDiaList[itemCnt] = Item(msg.sender, address(0x0), tokenId, price, Status.OffSale);

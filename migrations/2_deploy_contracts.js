@@ -1,9 +1,11 @@
 const DiaToken = artifacts.require("DiaNFT");
 const Won = artifacts.require("Won");
 const Market = artifacts.require("Market");
+const Funds = artifacts.require("Funds");
 
-module.exports = function(deployer) {
-  deployer.deploy(DiaToken);
-  deployer.deploy(Won, 10000000000);
-  deployer.deploy(Market, "0xFEC78CE97e2eD26d501dB74F13fFC7747d75cEab");
+module.exports = async function(deployer) {
+  await deployer.deploy(DiaToken);
+  await deployer.deploy(Won, 10000000000);
+  await deployer.deploy(Funds, Won.address);
+  await deployer.deploy(Market, Funds.address, Won.address, DiaToken.address);
 };

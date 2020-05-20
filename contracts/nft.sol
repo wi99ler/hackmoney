@@ -30,7 +30,6 @@ contract DiaNFT is ERC721 {
     string memory etc,
     address account
     ) public returns (uint256) {
-    require(owner == msg.sender, "Sender not authorized");
     uint256 DiaID = dia.length;
     dia.push(Dia(Clarity, Color, Carat, Cut, GirdleCode, Report, etc));
     _mint(account, DiaID);
