@@ -72,6 +72,11 @@ contract Funds {
         bool exist;
     }
 
+    struct Investor {
+        uint idx;
+        bool exist;
+    }
+
     struct rent {
         address investor;
         uint amount;
@@ -79,8 +84,10 @@ contract Funds {
 
     struct iou {
         mapping (uint => rent) debt;
+        mapping (address => Investor) investor;
         uint investorCnt;
         uint amount;
+        bool active;
     }
 
     mapping (address => uint) investor;
@@ -121,22 +128,31 @@ contract Funds {
     }
 
     function depositRequest(uint amount) public {
-        iou memory newIOU;
-        while(newIOU.amount == amount) {
+        iou memory newIOU = iou({investorCnt:0, amount:0, active:true});
+        while(newIOU.amount < amount) {
             for(uint i=0 ; i<investorCnt ; i++) {
-                uint invest = (pool[i].total - pool[i].lockup - pool[i].requested)*(investRate/100);
-                if (amount < newIOU.amount + invest) {
-                    uint investLeft = amount - newIOU.amount;
-                    newIOU.dept[pool[i].investor] = newIOU.dept[pool[i].investor] + investLeft;
-                    newIOU.amount = newIOU.amount + investLeft;
-                    pool[i].lockup = pool[i].lockup + investLeft;
-                } else {
-                    newIOU.dept[pool[i].investor] = newIOU.dept[pool[i].investor] + invest;
-                    newIOU.amount = newIOU.amount + invest;
-                    pool[i].lockup = pool[i].lockup + invest;
+                uint investAmount = (pool[i].total - pool[i].lockup - pool[i].requested)*(investRate/100);
+                if (amount < newIOU.amount + investAmount) {
+                    investAmount = amount - newIOU.amount;
                 }
+
+                if(!newIOU.investor[pool[i].investor].exist) {
+                    newIOU.debt[newIOU.investorCnt].investor = pool[i].investor;
+
+                    newIOU.investor[pool[i].investor] = new Investor(newIOU.investorCnt, true);
+                    newIOU.investorCnt++;
+                }
+
+                newIOU.debt[newIOU.investor[pool[i].investor].investor].amount += investAmount;
+
+                newIOU.amount += investAmount;
+                pool[i].lockup += investAmount;
+
+                currentFlag = i;
             }
         }
+        IOU[iouCnt] = newIOU;
+        iouCnt++;
     }
 
     function refundDeposit(uint iouId) public {
@@ -148,6 +164,7 @@ contract Funds {
             uint profit = (fund.debt[i].amount*fee)/100;
             pool[investor[fund.debt[i].investor]].total += (profit*(100-tax))/100;//
         }
+        IOU[iouId].active = false;
     }
 
     function save(uint amount) public {
