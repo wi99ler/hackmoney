@@ -39,6 +39,10 @@ contract Market {
         fee = 1;
     }
 
+    function getFee() public returns (uint) {
+        return fee;
+    }
+
     function register(uint256 tokenId, uint256 price) public {
         DiaNFT nft = DiaNFT(addrNFT);
         nft.transferFrom(msg.sender, address(this), tokenId);
