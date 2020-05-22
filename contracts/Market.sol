@@ -122,6 +122,10 @@ contract Market {
         RegisteredDiaList[itemId].status = Status.Rented;
     }
 
+//    function claim4ExpiredDia(uint itemId) public {
+//        require(RegisteredDiaList[itemId].seller == msg.sender, "only seller can call claim");
+//    }
+
     function confirmPurchase(uint itemId) public {
         Item memory dia = RegisteredDiaList[itemId];
         require(msg.sender == dia.buyer, "only buyer can confirm purchase");
