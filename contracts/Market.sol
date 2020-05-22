@@ -16,6 +16,7 @@ contract Market {
         address buyer;
         uint tokenId;
         uint256 price;
+        uint rentAt;
 
         Status status;
     }
@@ -42,7 +43,7 @@ contract Market {
         DiaNFT nft = DiaNFT(addrNFT);
         nft.transferFrom(msg.sender, address(this), tokenId);
 
-        RegisteredDiaList[itemCnt] = Item(msg.sender, address(0x0), tokenId, price, Status.OffSale);
+        RegisteredDiaList[itemCnt] = Item(msg.sender, address(0x0), tokenId, price, 0, Status.OffSale);
         itemCnt++;
     }
 
@@ -71,11 +72,12 @@ contract Market {
     }
 
     function getDiaMarket(uint256 first, uint256 cnt, Status _status) public view returns
-            (uint[] memory, uint[] memory, Status[] memory) {
+            (uint[] memory, uint[] memory, uint[] memory, Status[] memory) {
         // first, end limit 구현해야됨
 
         uint[] memory ids = new uint[] (cnt);
         uint[] memory price = new uint[](cnt);
+        uint[] memory rentAt = new uint[](cnt);
         Status[] memory status = new Status[](cnt);
 
         //Item[] memory dias = new Item[](itemId);
@@ -86,33 +88,37 @@ contract Market {
             if (dia.status == _status) {
                 ids[i] = dia.tokenId;
                 price[i] = dia.price;
+                rentAt[i] = dia.rentAt;
                 status[i] = dia.status;
                 Cnt++;
             }
         }
-        return (ids, price, status);
+        return (ids, price, rentAt, status);
     }
 
     function getDiamonds(uint256 first, uint256 end) public view returns
-            (uint[] memory, uint[] memory, Status[] memory) {
+            (uint[] memory, uint[] memory, uint[] memory, Status[] memory) {
         // first, end limit 구현해야됨
 
         uint[] memory ids = new uint[] (end-first);
         uint[] memory price = new uint[](end-first);
+        uint[] memory rentAt = new uint[](end-first);
         Status[] memory status = new Status[](end-first);
 
         //Item[] memory dias = new Item[](itemId);
         for (uint i = 0; i < end-first ; i++) {
             ids[i] = RegisteredDiaList[i+first].tokenId;
             price[i] = RegisteredDiaList[i+first].price;
+            rentAt[i] = RegisteredDiaList[i+first].rentAt;
             status[i] = RegisteredDiaList[i+first].status;
         }
-        return (ids, price, status);
+        return (ids, price, rentAt, status);
     }
 
     function rentDiamond(uint256 itemId) public {
         require(RegisteredDiaList[itemId].status == Status.OnSale, "The item is not onSale..");
         RegisteredDiaList[itemId].buyer = msg.sender;
+        RegisteredDiaList[itemId].rentAt = now;
         RegisteredDiaList[itemId].status = Status.Rented;
     }
 
@@ -141,6 +147,7 @@ contract Market {
 
         RegisteredDiaList[itemId].seller = address(0x0);
         RegisteredDiaList[itemId].price = 0;
+        RegisteredDiaList[itemId].rentAt = 0;
         RegisteredDiaList[itemId].status = Status.Disabled;
     }
 }
