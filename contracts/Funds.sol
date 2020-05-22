@@ -100,7 +100,9 @@ contract Funds {
     function cancelIOU(uint itemId, uint fee) public {
         won.transferFrom(addrMarket, address(this), (ious[itemId].amount * (100+fee))/100);
         if (((fund.account[address(this)].total - fund.account[address(this)].lockup) / won.balanceOf(address(this)))*100 > 50) {
-            // 
+            // no meaning line.
+            // just make for delete error.
+            require((fund.account[address(this)].total - fund.account[address(this)].lockup) / won.balanceOf(address(this))*100 > 50, "have to smaller than 50%");
         }
 
         for (uint i = 0 ; i < ious[itemId].addr.length ; i++) {
