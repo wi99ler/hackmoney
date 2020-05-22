@@ -21,7 +21,7 @@ contract Market {
         Status status;
     }
 
-    uint fee;
+    uint public fee;
 
     uint private itemCnt;
     mapping (uint => Item) RegisteredDiaList;
@@ -128,7 +128,7 @@ contract Market {
         Funds funds = Funds(addrFunds);
 //        Won won = Won(addrWon);
 
-        funds.depositRequest(itemId, RegisteredDiaList[itemId].price);
+        funds.requestDeposit(itemId, RegisteredDiaList[itemId].price);
     }
 
 //    function claim4ExpiredDia(uint itemId) public {
@@ -143,7 +143,7 @@ contract Market {
         won.transferFrom(msg.sender, dia.seller, dia.price);
         Funds funds = Funds(addrFunds);
         won.approve(addrFunds, (dia.price * (100+fee))/100);
-        funds.refundDeposit(itemId);
+        funds.cancelIOU(itemId, fee);
         DiaNFT nft = DiaNFT(addrNFT);
         nft.transferFrom(address(this), msg.sender, dia.tokenId);
     }

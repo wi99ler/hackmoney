@@ -6,30 +6,36 @@ import "./Market.sol";
 
 contract Funds {
     struct Account {
-        uint index;
+//        uint index;
         uint total;
         uint lockup;
         bool active;
+        bool exist;
     }
 
     struct Fund {
         mapping (address => Account) account;
         address[] addr;
         uint size;
+        uint taxRate;
+        uint investRate;
+        uint currentFlag;
     }
     Fund fund;
 
     struct Contribution {
-        uint index;
         uint amount;
+        bool exist;
     }
 
     struct IOU {
+        uint amount;
         mapping (address => Contribution) contribution;
         address[] addr;
-        uint size;
         bool active;
     }
+    IOU newIOU;
+
     mapping (uint => IOU) ious; //itemId => IOU
 
     // linking with other contracts
@@ -41,89 +47,99 @@ contract Funds {
 
     constructor (address Won) public {
         addrWon = Won;
-        investorCnt = 0;
-        currentFlag = 0;
-
-        lockedAmount = 0;
-        totalAmount = 0;
-
-        iouCnt = 0;
-
-        tax = 10;
+        fund.currentFlag = 0;
+        fund.taxRate = 10;
+        fund.addr = new address[](0);
+        fund.addr.push(address(this));
+        fund.account[address(this)] = Account(0, 0, true, true);
+        fund.investRate = 1;
     }
 
-    function depositRequest(uint itemId, uint amount) public {
-        iou memory newIOU = iou({itemId:itemId, investorCnt:0, amount:0, active:true});
+    function requestDeposit(uint itemId, uint amount) public {
+//        address[] memory addr;
+//        IOU memory newIOU = IOU({amount:amount, addr:addr, active:true});
+          newIOU = IOU({amount: amount,
+            addr: new address[](0),
+            active:true
+            });
+//        IOU memory newIOU = IOU({amount:amount, addr:new address[](0), active:true});
+        uint i = 0;
         while(newIOU.amount < amount) {
-            for(uint i=0 ; i<investorCnt ; i++) {
-                uint investAmount = (pool[i].total - pool[i].lockup - pool[i].requested)*(investRate/100);
-                if (amount < newIOU.amount + investAmount) {
-                    investAmount = amount - newIOU.amount;
-                }
+            if(!fund.account[fund.addr[i]].active) {
+                if (i < fund.size) i++;
+                else i = 0;
 
-                if(!newIOU.investor[pool[i].investor].exist) {
-                    newIOU.debt[newIOU.investorCnt].investor = pool[i].investor;
-
-                    newIOU.investor[pool[i].investor] = new Investor(newIOU.investorCnt, true);
-                    newIOU.investorCnt++;
-                }
-
-                newIOU.debt[newIOU.investor[pool[i].investor].investor].amount += investAmount;
-
-                newIOU.amount += investAmount;
-                pool[i].lockup += investAmount;
-
-                currentFlag = i;
+                continue;
             }
+            uint investAmount = (fund.account[fund.addr[i]].total - fund.account[fund.addr[i]].lockup)*(fund.investRate/100);
+            if (amount < newIOU.amount + investAmount) {
+                investAmount = amount - newIOU.amount;
+            }
+
+            // 새로운 contributor 추가
+            if(!(newIOU.contribution[fund.addr[i]].exist)) {
+                newIOU.addr.push(fund.addr[i]);
+                newIOU.contribution[fund.addr[i]] = Contribution({amount:0, exist:true});
+            }
+
+            newIOU.contribution[fund.addr[i]].amount += investAmount;
+
+            newIOU.amount += investAmount;
+            fund.account[fund.addr[i]].lockup += investAmount;
+
+            fund.currentFlag = i;
+
+            if (i < fund.size) i++;
+            else i = 0;
         }
-        IOU[iouCnt] = newIOU;
-        item2iou[itemId] = iouCnt;
-        iouCnt++;
+        ious[itemId] = newIOU;
 
         won.transfer(addrMarket, amount);
     }
 
-    function refundDeposit(uint itemId) public {
-        uint iouId = item2iou[itemId];
-        won.transferFrom(addrMarket, address(this), (IOU[iouId].amount * (100+market.getFee()))/100);
-
-        iou memory fund = IOU[iouId];
-        for (uint i=0 ; i< iou.investorCnt ; i++) {
-            pool[investor[fund.debt[i].investor]].lockup -= fund.debt[i].amount;
-            uint profit = (fund.debt[i].amount*market.getFee())/100;
-            pool[investor[fund.debt[i].investor]].total += (profit*(100-tax))/100;//
+    function cancelIOU(uint itemId, uint fee) public {
+        won.transferFrom(addrMarket, address(this), (ious[itemId].amount * (100+fee))/100);
+        if (((fund.account[address(this)].total - fund.account[address(this)].lockup) / won.balanceOf(address(this)))*100 > 50) {
+            // 
         }
-        IOU[iouId].active = false;
+
+        for (uint i = 0 ; i < ious[itemId].addr.length ; i++) {
+            fund.account[ious[itemId].addr[i]].lockup -= ious[itemId].contribution[ious[itemId].addr[i]].amount;
+            uint profit = (ious[itemId].contribution[ious[itemId].addr[i]].amount*fee)/100;
+            fund.account[ious[itemId].addr[i]].total += (profit*(100-fund.taxRate))/100;
+            fund.account[address(this)].total += (profit*fund.taxRate)/100;
+        }
+        ious[itemId].active = false;
+    }
+
+    function cancelIOU(uint itemId) public {
+        won.transferFrom(addrMarket, address(this), ious[itemId].amount);
+
+        for (uint i = 0 ; i < ious[itemId].addr.length ; i++) {
+            fund.account[ious[itemId].addr[i]].lockup -= ious[itemId].contribution[ious[itemId].addr[i]].amount;
+        }
+        ious[itemId].active = false;
     }
 
     function save(uint amount) public {
         won.transferFrom(msg.sender, address(this), amount);
-        if (pool[investor[msg.sender]].exist) {
-            pool[investor[msg.sender]].total = pool[investor[msg.sender]].total + amount;
+        if (fund.account[msg.sender].exist) {
+            fund.account[msg.sender].total += amount;
         }
         else {
-            investor[msg.sender] = investorCnt;
-            pool[investor[msg.sender]] = account(msg.sender, pool[investor[msg.sender]].total + amount, 0, 0, true);
-            investorCnt++;
+            fund.account[msg.sender] = Account(amount, 0, true, true);
+            fund.addr.push(msg.sender);
+            fund.size++;
         }
     }
 
-    function withdraw(uint256 amount) public {
-        require(pool[investor[msg.sender]].total <= amount, "withdraw have to be smaller than saving amount");
-        if (pool[investor[msg.sender]].total - pool[investor[msg.sender]].lockup > amount) {
-            won.transfer(msg.sender, amount);
-            pool[investor[msg.sender]].total -= amount;
-        }
-        else {
-            uint withdrawAmount = pool[investor[msg.sender]].total - pool[investor[msg.sender]].lockup;
-            won.transfer(msg.sender, withdrawAmount);
-            pool[investor[msg.sender]].total = 0;
-            pool[investor[msg.sender]].requested = amount - withdrawAmount;
-        }
+    function withdraw(uint amount) public {
+        require(fund.account[msg.sender].total - fund.account[msg.sender].lockup >= amount, "withdraw have to be smaller than saving amount");
+        won.transfer(msg.sender, amount);
+        fund.account[msg.sender].total -= amount;
     }
 
-    // function SplitProfit() payable {
-        // msg.value
-        //
-    // }
+    function changeAccountStatus(bool activate) public {
+        fund.account[msg.sender].active = activate;
+    }
 }
