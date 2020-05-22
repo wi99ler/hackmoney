@@ -85,6 +85,7 @@ contract Funds {
     struct iou {
         mapping (uint => rent) debt;
         mapping (address => Investor) investor;
+        uint itemId;
         uint investorCnt;
         uint amount;
         bool active;
@@ -96,6 +97,8 @@ contract Funds {
 
     mapping(uint => iou) IOU;
     uint iouCnt;
+
+    mapping (uint => uint) item2iou;
 
     uint currentFlag;
 
@@ -127,8 +130,8 @@ contract Funds {
         iouCnt = 0;
     }
 
-    function depositRequest(uint amount) public {
-        iou memory newIOU = iou({investorCnt:0, amount:0, active:true});
+    function depositRequest(uint itemId, uint amount) public {
+        iou memory newIOU = iou({itemId:itemId, investorCnt:0, amount:0, active:true});
         while(newIOU.amount < amount) {
             for(uint i=0 ; i<investorCnt ; i++) {
                 uint investAmount = (pool[i].total - pool[i].lockup - pool[i].requested)*(investRate/100);
@@ -152,10 +155,14 @@ contract Funds {
             }
         }
         IOU[iouCnt] = newIOU;
+        item2iou[itemId] = iouCnt;
         iouCnt++;
+
+        WON.transfer(addrMarket, amount);
     }
 
-    function refundDeposit(uint iouId) public {
+    function refundDeposit(uint itemId) public {
+        uint iouId = item2iou[itemId];
         WON.transferFrom(addrMarket, address(this), (IOU[iouId].amount * (100+fee))/100);
 
         iou memory fund = IOU[iouId];

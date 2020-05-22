@@ -120,6 +120,11 @@ contract Market {
         RegisteredDiaList[itemId].buyer = msg.sender;
         RegisteredDiaList[itemId].rentAt = now;
         RegisteredDiaList[itemId].status = Status.Rented;
+
+        Funds funds = Funds(addrFunds);
+//        Won won = Won(addrWon);
+
+        funds.depositRequest(itemId, RegisteredDiaList[itemId].price);
     }
 
 //    function claim4ExpiredDia(uint itemId) public {
@@ -132,6 +137,9 @@ contract Market {
         Won won = Won(addrWon);
         won.transferFrom(msg.sender, address(this), (dia.price * fee)/100);
         won.transferFrom(msg.sender, dia.seller, dia.price);
+        Funds funds = Funds(addrFunds);
+        won.approve(addrFunds, (dia.price * (100+fee))/100);
+        funds.refundDeposit(itemId);
         DiaNFT nft = DiaNFT(addrNFT);
         nft.transferFrom(address(this), msg.sender, dia.tokenId);
     }
