@@ -9,7 +9,7 @@ contract Market {
 //    event Register(uint itemId, uint32 price);
 //    event Deposit(uint itemId, uint32 price, bool success);
 
-    enum Status {OffSale, OnSale, Rented, Sold}
+    enum Status {OffSale, OnSale, Rented, Sold, Disabled}
 
     struct Item {
         address seller;
@@ -40,7 +40,6 @@ contract Market {
 
     function register(uint256 tokenId, uint256 price) public {
         DiaNFT nft = DiaNFT(addrNFT);
-        nft.approve(address(this), tokenId);
         nft.transferFrom(msg.sender, address(this), tokenId);
 
         RegisteredDiaList[itemCnt] = Item(msg.sender, address(0x0), tokenId, price, Status.OffSale);
@@ -71,6 +70,29 @@ contract Market {
         return RegisteredDiaList[itemId];
     }
 
+    function getDiaMarket(uint256 first, uint256 cnt, Status _status) public view returns
+            (uint[] memory, uint[] memory, Status[] memory) {
+        // first, end limit 구현해야됨
+
+        uint[] memory ids = new uint[] (cnt);
+        uint[] memory price = new uint[](cnt);
+        Status[] memory status = new Status[](cnt);
+
+        //Item[] memory dias = new Item[](itemId);
+        uint Cnt = 0;
+        for (uint i = 0 ; i < itemCnt && Cnt <= cnt ; i++ ) {
+            Item storage dia = RegisteredDiaList[i+first];
+
+            if (dia.status == _status) {
+                ids[i] = dia.tokenId;
+                price[i] = dia.price;
+                status[i] = dia.status;
+                Cnt++;
+            }
+        }
+        return (ids, price, status);
+    }
+
     function getDiamonds(uint256 first, uint256 end) public view returns
             (uint[] memory, uint[] memory, Status[] memory) {
         // first, end limit 구현해야됨
@@ -80,12 +102,10 @@ contract Market {
         Status[] memory status = new Status[](end-first);
 
         //Item[] memory dias = new Item[](itemId);
-        for (uint i = first; i < end ; i++) {
-            Item storage dia = RegisteredDiaList[i];
-
-            ids[i] = dia.tokenId;
-            price[i] = dia.price;
-            status[i] = dia.status;
+        for (uint i = 0; i < end-first ; i++) {
+            ids[i] = RegisteredDiaList[i+first].tokenId;
+            price[i] = RegisteredDiaList[i+first].price;
+            status[i] = RegisteredDiaList[i+first].status;
         }
         return (ids, price, status);
     }
@@ -111,5 +131,16 @@ contract Market {
         require(msg.sender == RegisteredDiaList[itemId].buyer, "only buyer can return");
         RegisteredDiaList[itemId].buyer = address(0x0);
         RegisteredDiaList[itemId].status = Status.OnSale;
+    }
+
+    function returnNFT(uint itemId) public {
+        require(RegisteredDiaList[itemId].seller == msg.sender, "Only owner can return NFT");
+
+        DiaNFT nft = DiaNFT(addrNFT);
+        nft.transferFrom(address(this), msg.sender, RegisteredDiaList[itemId].tokenId);
+
+        RegisteredDiaList[itemId].seller = address(0x0);
+        RegisteredDiaList[itemId].price = 0;
+        RegisteredDiaList[itemId].status = Status.Disabled;
     }
 }

@@ -14,13 +14,13 @@
     "license": "ISC",
     "devDependencies": {
         "bootstrap": "^4.5.0",
-        "chai": "^4.1.2",
+        "chai": "^4.2.0",
         "chai-as-promised": "^7.1.1",
-        "chai-bignumber": "^2.0.2",
-        "lite-server": "^2.3.0",
-        "nodemon": "^1.17.3",
+        "chai-bignumber": "^3.0.0",
+        "lite-server": "^2.5.4",
+        "nodemon": "^2.0.4",
         "truffle": "^5.1.26",
-        "truffle-contract": "3.0.6"
+        "truffle-contract": "4.0.31"
     },
     "dependencies": {
         "@openzeppelin/contracts": "^3.0.1"
