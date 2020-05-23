@@ -38,6 +38,8 @@ contract Funds {
 
     mapping (uint => IOU) ious; //itemId => IOU
 
+    address owner;
+
     // linking with other contracts
     address public addrWon;
     Won public won;
@@ -46,6 +48,7 @@ contract Funds {
     Market public market;
 
     constructor (address Won) public {
+        owner = msg.sender;
         addrWon = Won;
         fund.currentFlag = 0;
         fund.taxRate = 10;
@@ -108,10 +111,29 @@ contract Funds {
         for (uint i = 0 ; i < ious[itemId].addr.length ; i++) {
             fund.account[ious[itemId].addr[i]].lockup -= ious[itemId].contribution[ious[itemId].addr[i]].amount;
             uint profit = (ious[itemId].contribution[ious[itemId].addr[i]].amount*fee)/100;
-            fund.account[ious[itemId].addr[i]].total += (profit*(100-fund.taxRate))/100;
-            fund.account[address(this)].total += (profit*fund.taxRate)/100;
+            fund.account[ious[itemId].addr[i]].total += (profit*(100-taxRate))/100;
+            fund.account[address(this)].total += (profit*taxRate)/100;
         }
         ious[itemId].active = false;
+    }
+
+    function regenerateIOU(uint itemId) public {
+        require((fund.account[address(this)].total - fund.account[address(this)].lockup) >= ious[itemId].amount/2, "not enough fund amount");
+        won.transferFrom(addrMarket, address(this), ious[itemId].amount/2);
+
+        for (uint i = 0 ; i < ious[itemId].addr.length ; i++) {
+            fund.account[ious[itemId].addr[i]].lockup -= ious[itemId].contribution[ious[itemId].addr[i]].amount;
+        }
+
+        // 새로운 contributor 추가
+        for(uint i = 0 ; i < ious[itemId].addr.length; i++){
+           delete ious[itemId].addr[i];
+        }
+
+        ious[itemId].addr.push(addrMarket);
+        ious[itemId].contribution[addrMarket] = Contribution({amount:ious[itemId].amount/2, exist:true});
+        ious[itemId].amount = ious[itemId].amount/2;
+        fund.account[address(this)].lockup += ious[itemId].amount;
     }
 
     function cancelIOU(uint itemId) public {
@@ -125,7 +147,10 @@ contract Funds {
 
     function save(uint amount) public {
         won.transferFrom(msg.sender, address(this), amount);
-        if (fund.account[msg.sender].exist) {
+        if (msg.sender == owner) {
+            fund.account[address(this)].total += amount;
+        }
+        else if (fund.account[msg.sender].exist) {
             fund.account[msg.sender].total += amount;
         }
         else {

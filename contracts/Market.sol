@@ -9,7 +9,7 @@ contract Market {
 //    event Register(uint itemId, uint32 price);
 //    event Deposit(uint itemId, uint32 price, bool success);
 
-    enum Status {OffSale, OnSale, Rented, Sold, Disabled}
+    enum Status {OffSale, OnSale, Rented, Sold, Disabled, Stolen}
 
     struct Item {
         address seller;
@@ -17,9 +17,12 @@ contract Market {
         uint tokenId;
         uint256 price;
         uint rentAt;
+        bool prepayment;
 
         Status status;
     }
+
+    address owner;
 
     uint public fee;
 
@@ -32,6 +35,7 @@ contract Market {
     address public addrNFT;
 
     constructor (address Funds, address Won, address NFT) public {
+        owner = msg.sender;
         addrFunds = Funds;
         addrWon = Won;
         addrNFT = NFT;
@@ -39,22 +43,24 @@ contract Market {
         fee = 1;
     }
 
-    function getFee() public returns (uint) {
-        return fee;
-    }
-
     function register(uint256 tokenId, uint256 price) public {
         DiaNFT nft = DiaNFT(addrNFT);
         nft.transferFrom(msg.sender, address(this), tokenId);
 
-        RegisteredDiaList[itemCnt] = Item(msg.sender, address(0x0), tokenId, price, 0, Status.OffSale);
+        RegisteredDiaList[itemCnt] = Item(msg.sender, address(0x0), tokenId, price, 0, false, Status.OnSale);
         itemCnt++;
     }
 
-    function transitStatus (uint itemId, Status newStatus) public {
-        Item memory item = RegisteredDiaList[itemId];
-        require(item.seller == msg.sender, "not owner of this token");
-        RegisteredDiaList[itemId].status = newStatus;
+    function changeOnSale(uint256 itemId) public {
+        require(RegisteredDiaList[itemId].seller == msg.sender, "not owner of this token");
+        require(RegisteredDiaList[itemId].status == Status.OffSale, "not off sale");
+        RegisteredDiaList[itemId].status = Status.OnSale;
+    }
+
+    function changeOffSale(uint256 itemId) public {
+        require(RegisteredDiaList[itemId].seller == msg.sender, "not owner of this token");
+        require(RegisteredDiaList[itemId].status == Status.OnSale, "not on sale");
+        RegisteredDiaList[itemId].status = Status.OffSale;
     }
 
     function getDiamondByTokenId(uint256 tokenId) public view returns(Item memory) {
@@ -68,6 +74,7 @@ contract Market {
 
     function changePrice(uint256 itemId, uint256 price) public {
         require(RegisteredDiaList[itemId].seller == msg.sender, "not owner of this token");
+        require(RegisteredDiaList[itemId].status == Status.OffSale, "not on sale");
         RegisteredDiaList[itemId].price = price;
     }
 
@@ -126,21 +133,45 @@ contract Market {
         RegisteredDiaList[itemId].status = Status.Rented;
 
         Funds funds = Funds(addrFunds);
-//        Won won = Won(addrWon);
 
         funds.requestDeposit(itemId, RegisteredDiaList[itemId].price);
     }
 
-//    function claim4ExpiredDia(uint itemId) public {
-//        require(RegisteredDiaList[itemId].seller == msg.sender, "only seller can call claim");
-//    }
+    function claim4liquidity(uint itemId) public {
+        require(RegisteredDiaList[itemId].seller == msg.sender, "only seller can claim");
+        require(RegisteredDiaList[itemId].prepayment == false, "Already paid");
+        Won won = Won(addrWon);
+        won.transfer(RegisteredDiaList[itemId].seller, RegisteredDiaList[itemId].price/2);
+        RegisteredDiaList[itemId].prepayment = true;
+    }
+
+    function claimExpiredDia(uint itemId) public {
+        require(RegisteredDiaList[itemId].seller == msg.sender, "only seller can claim");
+        require((now - RegisteredDiaList[itemId].rentAt) > 15 days, "it's not expired");
+
+        RegisteredDiaList[itemId].status = Status.Stolen;
+    }
+
+    function settleDebt(uint itemId) public {
+        require(msg.sender == owner, "only owner can execute this function");
+
+        Won won = Won(addrWon);
+        Funds funds = Funds(addrFunds);
+
+        Item memory dia = RegisteredDiaList[itemId];
+        won.approve(addrFunds, dia.price/2);
+        funds.cancelIOU(itemId);
+    }
 
     function confirmPurchase(uint itemId) public {
+        require(msg.sender == RegisteredDiaList[itemId].buyer, "only buyer can confirm purchase");
         Item memory dia = RegisteredDiaList[itemId];
-        require(msg.sender == dia.buyer, "only buyer can confirm purchase");
         Won won = Won(addrWon);
         won.transferFrom(msg.sender, address(this), (dia.price * fee)/100);
-        won.transferFrom(msg.sender, dia.seller, dia.price);
+        if (dia.prepayment)
+            won.transferFrom(msg.sender, address(this), dia.price);
+        else
+            won.transferFrom(msg.sender, dia.seller, dia.price);
         Funds funds = Funds(addrFunds);
         won.approve(addrFunds, (dia.price * (100+fee))/100);
         funds.cancelIOU(itemId, fee);
@@ -153,6 +184,17 @@ contract Market {
         require(msg.sender == RegisteredDiaList[itemId].buyer, "only buyer can return");
         RegisteredDiaList[itemId].buyer = address(0x0);
         RegisteredDiaList[itemId].status = Status.OnSale;
+
+        Funds funds = Funds(addrFunds);
+        Won won = Won(addrWon);
+        if (RegisteredDiaList[itemId].prepayment) {
+            won.approve(addrFunds, RegisteredDiaList[itemId].price/2);
+            funds.regenerateIOU(itemId);
+        }
+        else {
+            won.approve(addrFunds, RegisteredDiaList[itemId].price);
+            funds.cancelIOU(itemId);
+        }
     }
 
     function returnNFT(uint itemId) public {
