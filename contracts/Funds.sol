@@ -108,8 +108,8 @@ contract Funds {
         for (uint i = 0 ; i < ious[itemId].addr.length ; i++) {
             fund.account[ious[itemId].addr[i]].lockup -= ious[itemId].contribution[ious[itemId].addr[i]].amount;
             uint profit = (ious[itemId].contribution[ious[itemId].addr[i]].amount*fee)/100;
-            fund.account[ious[itemId].addr[i]].total += (profit*(100-fund.taxRate))/100;
-            fund.account[address(this)].total += (profit*fund.taxRate)/100;
+            fund.account[ious[itemId].addr[i]].total += (profit*(100-taxRate))/100;
+            fund.account[address(this)].total += (profit*taxRate)/100;
         }
         ious[itemId].active = false;
     }
