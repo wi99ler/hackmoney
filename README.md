@@ -27,7 +27,6 @@ won.transfer(accounts[3], 100000000)
 
 //1번 계정으로 다이아 NFT 2개 발행
 nft.mintDia("Clarity0", "Color0", "Carat0", "Cut0", "GirdleCode0", "Report0", "etc0", accounts[1])
-nft.approve()
 nft.mintDia("Clarity1", "Color1", "Carat1", "Cut1", "GirdleCode1", "Report1", "etc1", accounts[1])
 //nft.getDia(1)
 
