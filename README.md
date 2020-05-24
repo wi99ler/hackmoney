@@ -46,4 +46,6 @@ market.rentDiamond(0, {from: accounts[2]})
 #####################################################################################################
 0
 
-market.claim4liquidity(1, {from:accounts[1]})
+market.claim4liquidity(0, {from:accounts[1]})
+
+market.returnDiamond(0, {from:accounts[2]})

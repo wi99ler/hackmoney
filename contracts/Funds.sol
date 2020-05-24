@@ -5,7 +5,6 @@ import "./StableCoin.sol";
 
 contract Funds {
     struct Account {
-//        uint index;
         uint total;
         uint lockup;
         bool active;
@@ -144,13 +143,13 @@ contract Funds {
         } else {
             fund.currentFlag++;
         }
-        uint i = 0;//fund.currentFlag;
+        uint i = fund.currentFlag;
 
         ious[itemId] = IOU({amount:0, addr:new address[](0), active:true});
 
         while(ious[itemId].amount < amount) {
             if(fund.account[fund.addr[i]].active) {
-                uint investAmount = (fund.account[fund.addr[i]].total - fund.account[fund.addr[i]].lockup);//*(fund.investRate/100); // TODO
+                uint investAmount = ((fund.account[fund.addr[i]].total - fund.account[fund.addr[i]].lockup)*fund.investRate)/100; // TODO
                 if (amount < ious[itemId].amount + investAmount) {
                     investAmount = amount - ious[itemId].amount;
                 }
