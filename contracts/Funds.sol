@@ -45,9 +45,10 @@ contract Funds {
     address public addrMarket;
     Market public market;
 
-    constructor (address Won) public {
+    constructor (address Won, address Market) public {
         owner = msg.sender;
         addrWon = Won;
+        addrMarket = Market;
         fund.currentFlag = 0;
         fund.taxRate = 10;
         fund.addr = new address[](0);
