@@ -161,17 +161,17 @@ contract Funds {
                     ious[itemId].contribution[fund.addr[i]] = Contribution({amount:0, exist:true});
                 }
 
-            newIOU.contribution[fund.addr[i]].amount += investAmount;
+                ious[itemId].contribution[fund.addr[i]].amount += investAmount;
 
-            newIOU.amount += investAmount;
-            fund.account[fund.addr[i]].lockup += investAmount;
+                ious[itemId].amount += investAmount;
+                fund.account[fund.addr[i]].lockup += investAmount;
 
-            fund.currentFlag = i;
+                fund.currentFlag = i;
 
-            if (i < fund.size) i++;
-            else i = 0;
+                if (i < fund.addr.length) i++;
+                else i = 0;
+            }
         }
-        ious[itemId] = newIOU;
 
         Won won = Won(addrWon);
         won.transfer(addrMarket, amount);
@@ -203,6 +203,13 @@ contract Funds {
         for (uint i = 0 ; i < ious[itemId].addr.length ; i++) {
             fund.account[ious[itemId].addr[i]].lockup -= ious[itemId].contribution[ious[itemId].addr[i]].amount;
         }
+
+        // 새로운 contributor 추가
+        for(uint i = 0 ; i < ious[itemId].addr.length; i++){
+           delete ious[itemId].addr[i];
+        }
+
+        ious[itemId].addr.push(addrMarket);
         ious[itemId].contribution[addrMarket] = Contribution({amount:ious[itemId].amount/2, exist:true});
         ious[itemId].amount = ious[itemId].amount/2;
         fund.account[address(this)].lockup += ious[itemId].amount;
