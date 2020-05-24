@@ -66,32 +66,42 @@ contract Funds {
 //        return ious[itemId];
 //    }
 
-    function concat(string _a, string _b) public returns (string){
+    function concat(string memory _a, string memory _b) public pure returns (string memory){
         bytes memory bytes_a = bytes(_a);
         bytes memory bytes_b = bytes(_b);
         string memory length_ab = new string(bytes_a.length + bytes_b.length);
         bytes memory bytes_c = bytes(length_ab);
         uint k = 0;
         for (uint i = 0; i < bytes_a.length; i++) bytes_c[k++] = bytes_a[i];
-        for (i = 0; i < bytes_b.length; i++) bytes_c[k++] = bytes_b[i];
+        for (uint i = 0; i < bytes_b.length; i++) bytes_c[k++] = bytes_b[i];
         return string(bytes_c);
     }
 
-    function uintToString(uint _v) public returns (string str) {
-        uint v = _v;
-        uint maxLength = 100;
-        bytes memory reversed = new bytes(maxLength);
-        uint i = 0;
-        while (v != 0) {
-            uint remainder = v % 10;
-            v = v / 10;
-            reversed[i++] = byte(48 + remainder);
+    function uint2str(uint _i) public pure returns (string memory) {
+        uint i = _i;
+        if (i == 0) {
+            return "0";
         }
-        bytes memory s = new bytes(i + 1);
-        for (uint j = 0; j <= i; j++) {
-            s[j] = reversed[i - j];
+        uint j = i;
+        uint len;
+        while (j != 0) {
+            len++;
+            j /= 10;
         }
-        str = string(s);
+        bytes memory bstr = new bytes(len);
+        uint k = len - 1;
+        while (i != 0) {
+            bstr[k--] = byte(uint8(48 + i % 10));
+            i /= 10;
+        }
+        return string(bstr);
+    }
+
+    function addressToString(address x) public pure returns (string memory) {
+        bytes memory b = new bytes(20);
+        for (uint i = 0; i < 20; i++)
+            b[i] = byte(uint8(uint(x) / (2**(8*(19 - i)))));
+        return string(b);
     }
 
     function getIOU(uint itemId) public view returns (string memory) {
@@ -100,16 +110,16 @@ contract Funds {
         ret = concat(ret, "{");
         ret = concat(ret, "\"amount\"");
         ret = concat(ret, ":");
-        ret = concat(ret, uintToString(ious[itemId].amount));
+        ret = concat(ret, uint2str(ious[itemId].amount));
         ret = concat(ret, ",");
 
         ret = concat(ret, "\"contribution\"");
         ret = concat(ret, ":");
         ret = concat(ret, "[");
         for(uint i = 0 ; i < ious[itemId].addr.length ; i++) {
-            ret = concat(ret, ious[itemId].addr[i]);
+            ret = concat(ret, addressToString(ious[itemId].addr[i]));
             ret = concat(ret, ":");
-            ret = concat(ret, ious[itemId].contribution[ious[itemId].addr[i]].amount);
+            ret = concat(ret, uint2str(ious[itemId].contribution[ious[itemId].addr[i]].amount));
             if (i+1 != ious[itemId].addr.length) {
                 ret = concat(ret, ",");
             }
