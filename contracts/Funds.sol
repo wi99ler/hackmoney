@@ -42,8 +42,6 @@ contract Funds {
 
     // linking with other contracts
     address public addrWon;
-    Won public won;
-
     address public addrMarket;
     Market public market;
 
@@ -97,10 +95,12 @@ contract Funds {
         }
         ious[itemId] = newIOU;
 
+        Won won = Won(addrWon);
         won.transfer(addrMarket, amount);
     }
 
     function cancelIOU(uint itemId, uint fee) public {
+        Won won = Won(addrWon);
         won.transferFrom(addrMarket, address(this), (ious[itemId].amount * (100+fee))/100);
 
         uint taxRate = 0;
@@ -119,6 +119,7 @@ contract Funds {
 
     function regenerateIOU(uint itemId) public {
         require((fund.account[address(this)].total - fund.account[address(this)].lockup) >= ious[itemId].amount/2, "not enough fund amount");
+        Won won = Won(addrWon);
         won.transferFrom(addrMarket, address(this), ious[itemId].amount/2);
 
         for (uint i = 0 ; i < ious[itemId].addr.length ; i++) {
@@ -137,6 +138,7 @@ contract Funds {
     }
 
     function cancelIOU(uint itemId) public {
+        Won won = Won(addrWon);
         won.transferFrom(addrMarket, address(this), ious[itemId].amount);
 
         for (uint i = 0 ; i < ious[itemId].addr.length ; i++) {
@@ -146,7 +148,8 @@ contract Funds {
     }
 
     function save(uint amount) public {
-        won.transferFrom(msg.sender, address(this), amount);
+        Won won = Won(addrWon);
+        won.transferFrom(msg.sender,address(this), amount);
         if (msg.sender == owner) {
             fund.account[address(this)].total += amount;
         }
@@ -162,6 +165,7 @@ contract Funds {
 
     function withdraw(uint amount) public {
         require(fund.account[msg.sender].total - fund.account[msg.sender].lockup >= amount, "withdraw have to be smaller than saving amount");
+        Won won = Won(addrWon);
         won.transfer(msg.sender, amount);
         fund.account[msg.sender].total -= amount;
     }
