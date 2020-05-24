@@ -10,6 +10,12 @@ let won = await Won.deployed()
 let market = await Market.deployed()
 let funds = await Funds.deployed()
 
+funds.setMarket(market)
+
+
+
+
+
 // 0번 계정 운영자, 1번 계정 도매상, 2번 계정 소매상, 3번 계정 투자자
 // 1, 2, 3 각각 100000000 배분
 let accounts = await web3.eth.getAccounts()
@@ -34,4 +40,7 @@ funds.save(100, {from: accounts[3]})
 nft.approve(market.address, 0, {from: accounts[1]})
 market.register(0, 1000000, {from: accounts[1]})
 //nft.ownerOf(0)
+
+// 2번 계정으로 0번 NFT rent
+market.rentDiamond(0, {from: accounts[2]})
 #####################################################################################################

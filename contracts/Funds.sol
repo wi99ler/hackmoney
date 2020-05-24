@@ -45,10 +45,9 @@ contract Funds {
     address public addrMarket;
     Market public market;
 
-    constructor (address Won, address Market) public {
+    constructor (address Won) public {
         owner = msg.sender;
         addrWon = Won;
-        addrMarket = Market;
         fund.currentFlag = 0;
         fund.taxRate = 10;
         fund.addr = new address[](0);
@@ -57,13 +56,44 @@ contract Funds {
         fund.investRate = 1;
     }
 
+    function setMarket(address Market) public {
+        require(msg.sender == owner, "only owner can set market");
+
+        addrMarket = Market;
+    }
+
+//    function getIOU(uint itemId) public view returns (IOU memory){
+//        return ious[itemId];
+//    }
+
+    function concat(string _a, string _b) public returns (string){
+        bytes memory bytes_a = bytes(_a);
+        bytes memory bytes_b = bytes(_b);
+        string memory length_ab = new string(bytes_a.length + bytes_b.length);
+        bytes memory bytes_c = bytes(length_ab);
+        uint k = 0;
+        for (uint i = 0; i < bytes_a.length; i++) bytes_c[k++] = bytes_a[i];
+        for (i = 0; i < bytes_b.length; i++) bytes_c[k++] = bytes_b[i];
+        return string(bytes_c);
+    }
+    function getIOU(uint itemId) public view returns (string memory) {
+        string memory ret = "";
+
+        ret = concat(ret, "{");
+        ret = concat(ret, "\"amount\"");
+
+        ret = concat(ret, "}");
+
+        return "hello";
+    }
+
     function requestDeposit(uint itemId, uint amount) public {
 //        address[] memory addr;
 //        IOU memory newIOU = IOU({amount:amount, addr:addr, active:true});
-          newIOU = IOU({amount: amount,
+        newIOU = IOU({amount: 0,
             addr: new address[](0),
             active:true
-            });
+        });
 //        IOU memory newIOU = IOU({amount:amount, addr:new address[](0), active:true});
         uint i = 0;
         while(newIOU.amount < amount) {

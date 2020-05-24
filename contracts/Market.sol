@@ -57,10 +57,10 @@ contract Market {
         RegisteredDiaList[itemId].status = Status.OnSale;
     }
 
-    function changeOffSale(uint256 itemId) public {
+    function changeOffSale(uint256 iteblic {
         require(RegisteredDiaList[itemId].seller == msg.sender, "not owner of this token");
         require(RegisteredDiaList[itemId].status == Status.OnSale, "not on sale");
-        RegisteredDiaList[itemId].status = Status.OffSale;
+        RegisteredDiaList[itemId].status = Status.OffS
     }
 
     function getDiamondByTokenId(uint256 tokenId) public view returns(Item memory) {
