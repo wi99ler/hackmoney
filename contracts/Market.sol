@@ -40,7 +40,7 @@ contract Market {
         addrWon = Won;
         addrNFT = NFT;
         itemCnt = 0;
-        fee = 1;
+        fee = 5;
     }
 
     function register(uint256 tokenId, uint256 price) public {

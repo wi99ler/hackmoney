@@ -2,7 +2,6 @@ pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 
 import "./StableCoin.sol";
-import "./Market.sol";
 
 contract Funds {
     struct Account {
@@ -16,7 +15,6 @@ contract Funds {
     struct Fund {
         mapping (address => Account) account;
         address[] addr;
-        uint size;
         uint taxRate;
         uint investRate;
         uint currentFlag;
@@ -34,7 +32,6 @@ contract Funds {
         address[] addr;
         bool active;
     }
-    IOU newIOU;
 
     mapping (uint => IOU) ious; //itemId => IOU
 
@@ -43,7 +40,6 @@ contract Funds {
     // linking with other contracts
     address public addrWon;
     address public addrMarket;
-    Market public market;
 
     constructor (address Won) public {
         owner = msg.sender;
@@ -53,7 +49,7 @@ contract Funds {
         fund.addr = new address[](0);
         fund.addr.push(address(this));
         fund.account[address(this)] = Account(0, 0, true, true);
-        fund.investRate = 1;
+        fund.investRate = 10;
     }
 
     function setMarket(address Market) public {
@@ -61,10 +57,6 @@ contract Funds {
 
         addrMarket = Market;
     }
-
-//    function getIOU(uint itemId) public view returns (IOU memory){
-//        return ious[itemId];
-//    }
 
     function concat(string memory _a, string memory _b) public pure returns (string memory){
         bytes memory bytes_a = bytes(_a);
@@ -88,20 +80,27 @@ contract Funds {
             len++;
             j /= 10;
         }
-        bytes memory bstr = new bytes(len);
+        bytes memory bStr = new bytes(len);
         uint k = len - 1;
         while (i != 0) {
-            bstr[k--] = byte(uint8(48 + i % 10));
+            bStr[k--] = byte(uint8(48 + i % 10));
             i /= 10;
         }
-        return string(bstr);
+        return string(bStr);
     }
 
-    function addressToString(address x) public pure returns (string memory) {
-        bytes memory b = new bytes(20);
-        for (uint i = 0; i < 20; i++)
-            b[i] = byte(uint8(uint(x) / (2**(8*(19 - i)))));
-        return string(b);
+    function addressToString(address _addr) public pure returns (string memory) {
+        bytes32 value = bytes32(uint256(_addr));
+        bytes memory alphabet = "0123456789abcdef";
+
+        bytes memory str = new bytes(51);
+        str[0] = '0';
+        str[1] = 'x';
+        for (uint256 i = 0; i < 20; i++) {
+            str[2+i*2] = alphabet[uint8(value[i + 12] >> 4)];
+            str[3+i*2] = alphabet[uint8(value[i + 12] & 0x0f)];
+        }
+        return string(str);
     }
 
     function getIOU(uint itemId) public view returns (string memory) {
@@ -140,31 +139,27 @@ contract Funds {
     }
 
     function requestDeposit(uint itemId, uint amount) public {
-//        address[] memory addr;
-//        IOU memory newIOU = IOU({amount:amount, addr:addr, active:true});
-        newIOU = IOU({amount: 0,
-            addr: new address[](0),
-            active:true
-        });
-//        IOU memory newIOU = IOU({amount:amount, addr:new address[](0), active:true});
-        uint i = 0;
-        while(newIOU.amount < amount) {
-            if(!fund.account[fund.addr[i]].active) {
-                if (i < fund.size) i++;
-                else i = 0;
+        if (fund.currentFlag+1 >= fund.addr.length) {
+            fund.currentFlag = 0;
+        } else {
+            fund.currentFlag++;
+        }
+        uint i = 0;//fund.currentFlag;
 
-                continue;
-            }
-            uint investAmount = (fund.account[fund.addr[i]].total - fund.account[fund.addr[i]].lockup)*(fund.investRate/100);
-            if (amount < newIOU.amount + investAmount) {
-                investAmount = amount - newIOU.amount;
-            }
+        ious[itemId] = IOU({amount:0, addr:new address[](0), active:true});
 
-            // 새로운 contributor 추가
-            if(!(newIOU.contribution[fund.addr[i]].exist)) {
-                newIOU.addr.push(fund.addr[i]);
-                newIOU.contribution[fund.addr[i]] = Contribution({amount:0, exist:true});
-            }
+        while(ious[itemId].amount < amount) {
+            if(fund.account[fund.addr[i]].active) {
+                uint investAmount = (fund.account[fund.addr[i]].total - fund.account[fund.addr[i]].lockup);//*(fund.investRate/100); // TODO
+                if (amount < ious[itemId].amount + investAmount) {
+                    investAmount = amount - ious[itemId].amount;
+                }
+
+                // 새로운 contributor 추가
+                if(!ious[itemId].contribution[fund.addr[i]].exist) {
+                    ious[itemId].addr.push(fund.addr[i]);
+                    ious[itemId].contribution[fund.addr[i]] = Contribution({amount:0, exist:true});
+                }
 
             newIOU.contribution[fund.addr[i]].amount += investAmount;
 
@@ -208,13 +203,6 @@ contract Funds {
         for (uint i = 0 ; i < ious[itemId].addr.length ; i++) {
             fund.account[ious[itemId].addr[i]].lockup -= ious[itemId].contribution[ious[itemId].addr[i]].amount;
         }
-
-        // 새로운 contributor 추가
-        for(uint i = 0 ; i < ious[itemId].addr.length; i++){
-           delete ious[itemId].addr[i];
-        }
-
-        ious[itemId].addr.push(addrMarket);
         ious[itemId].contribution[addrMarket] = Contribution({amount:ious[itemId].amount/2, exist:true});
         ious[itemId].amount = ious[itemId].amount/2;
         fund.account[address(this)].lockup += ious[itemId].amount;
@@ -232,7 +220,7 @@ contract Funds {
 
     function save(uint amount) public {
         Won won = Won(addrWon);
-        won.transferFrom(msg.sender,address(this), amount);
+        won.transferFrom(msg.sender, address(this), amount);
         if (msg.sender == owner) {
             fund.account[address(this)].total += amount;
         }
@@ -242,7 +230,6 @@ contract Funds {
         else {
             fund.account[msg.sender] = Account(amount, 0, true, true);
             fund.addr.push(msg.sender);
-            fund.size++;
         }
     }
 
@@ -255,5 +242,9 @@ contract Funds {
 
     function changeAccountStatus(bool activate) public {
         fund.account[msg.sender].active = activate;
+    }
+
+    function getAccount() public view returns (uint) {
+        return fund.account[msg.sender].total;
     }
 }
