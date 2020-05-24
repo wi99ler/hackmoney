@@ -76,15 +76,57 @@ contract Funds {
         for (i = 0; i < bytes_b.length; i++) bytes_c[k++] = bytes_b[i];
         return string(bytes_c);
     }
+
+    function uintToString(uint _v) public returns (string str) {
+        uint v = _v;
+        uint maxLength = 100;
+        bytes memory reversed = new bytes(maxLength);
+        uint i = 0;
+        while (v != 0) {
+            uint remainder = v % 10;
+            v = v / 10;
+            reversed[i++] = byte(48 + remainder);
+        }
+        bytes memory s = new bytes(i + 1);
+        for (uint j = 0; j <= i; j++) {
+            s[j] = reversed[i - j];
+        }
+        str = string(s);
+    }
+
     function getIOU(uint itemId) public view returns (string memory) {
         string memory ret = "";
 
         ret = concat(ret, "{");
         ret = concat(ret, "\"amount\"");
+        ret = concat(ret, ":");
+        ret = concat(ret, uintToString(ious[itemId].amount));
+        ret = concat(ret, ",");
+
+        ret = concat(ret, "\"contribution\"");
+        ret = concat(ret, ":");
+        ret = concat(ret, "[");
+        for(uint i = 0 ; i < ious[itemId].addr.length ; i++) {
+            ret = concat(ret, ious[itemId].addr[i]);
+            ret = concat(ret, ":");
+            ret = concat(ret, ious[itemId].contribution[ious[itemId].addr[i]].amount);
+            if (i+1 != ious[itemId].addr.length) {
+                ret = concat(ret, ",");
+            }
+        }
+        ret = concat(ret, "]");
+        ret = concat(ret, ",");
+
+        ret = concat(ret, "\"active\"");
+        ret = concat(ret, ":");
+        if(ious[itemId].active)
+            ret = concat(ret, "true");
+        else
+            ret = concat(ret, "false");
 
         ret = concat(ret, "}");
 
-        return "hello";
+        return ret;
     }
 
     function requestDeposit(uint itemId, uint amount) public {
