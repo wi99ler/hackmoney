@@ -138,11 +138,6 @@ contract Funds {
     }
 
     function requestDeposit(uint itemId, uint amount) public {
-        if (fund.currentFlag+1 >= fund.addr.length) {
-            fund.currentFlag = 0;
-        } else {
-            fund.currentFlag++;
-        }
         uint i = fund.currentFlag;
 
         ious[itemId] = IOU({amount:0, addr:new address[](0), active:true});
@@ -166,10 +161,10 @@ contract Funds {
                 fund.account[fund.addr[i]].lockup += investAmount;
 
                 fund.currentFlag = i;
-
-                if (i < fund.addr.length) i++;
-                else i = 0;
             }
+
+            if (++i >= fund.addr.length) i = 0;
+            fund.currentFlag = i;
         }
 
         Won won = Won(addrWon);

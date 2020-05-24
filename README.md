@@ -34,6 +34,10 @@ won.approve(funds.address, 10000000, {from: accounts[3]})
 //won.allowance(accounts[3], funds.address)
 funds.save(10000000, {from: accounts[3]})
 
+//owner 투자
+won.approve(funds.address, 30000000, {from: accounts[0]})
+funds.save(30000000, {from: accounts[0]})
+
 // market에 0번 nft를 100만원에 등록한다
 nft.approve(market.address, 0, {from: accounts[1]})
 market.register(0, 1000000, {from: accounts[1]})
